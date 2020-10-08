@@ -1,5 +1,5 @@
 [package]
-name = "clever-cloud-logs-cli"
+name = "clever-cloud-logs"
 version = "0.1.0"
 authors = ["Rémi Bardon <remi.bardon.dev@gmail.com>"]
 edition = "2018"

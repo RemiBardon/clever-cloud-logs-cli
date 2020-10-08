@@ -302,7 +302,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "clever-cloud-logs-cli"
+name = "clever-cloud-logs"
 version = "0.1.0"
 dependencies = [
  "async-sse",
