@@ -15,7 +15,11 @@ fn main() {
         .get_matches();
 
     // Calling .unwrap() is safe here because "APP_ID" is required
-    println!("Using app ID: {}", matches.value_of("APP_ID").unwrap());
+    let app_id = matches.value_of("APP_ID").unwrap();
+
+    // Create HTTP endpoint
+    let endpoint = format!("https://api.clever-cloud.com:443/v2/logs/{}/sse", app_id);
+    println!("endpoint: {}", endpoint);
 
     // More program logic goes here...
 }
