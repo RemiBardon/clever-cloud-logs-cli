@@ -1,6 +1,10 @@
 extern crate clap;
 use clap::{Arg, App};
 
+use directories::UserDirs;
+use std::io::prelude::*;
+use std::fs::File;
+
 fn main() {
     let matches = App::new("Clever Cloud App Logs CLI")
         .version("1.0")
@@ -21,6 +25,14 @@ fn main() {
             .required(true)
         )
         .get_matches();
+        
+    let user_dirs = UserDirs::new().expect("Could not find user home directory");
+    let config_file_path = format!("{}/.config/clever-cloud", user_dirs.home_dir().display());
+
+    let mut config_file = File::open(config_file_path).expect("No file found at '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.");
+    
+    let mut config = String::new();
+    config_file.read_to_string(&mut config).expect("Unable to read the file at '~/.config/clever-cloud'");
 
     // Calling .unwrap() is safe here because "APP_ID" is required
     let app_id = matches.value_of("APP_ID").unwrap();
@@ -28,8 +40,8 @@ fn main() {
     // Create HTTP endpoint
     let mut endpoint = format!("https://api.clever-cloud.com:443/v2/logs/{}/sse", app_id);
 
-    // Calling .unwrap() is safe here because "token" is required
-    let access_token = matches.value_of("token").unwrap();
+    // FIXME: Replace config by actual access_token value
+    let access_token = config;
 
     // Add HTTP query parameters
     // FIXME: Find how is built o_auth_authorization_string

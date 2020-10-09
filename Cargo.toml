@@ -8,4 +8,5 @@ edition = "2018"
 
 [dependencies]
 clap = "2.33.3"
+directories = "3.0.1"
 async-sse = "4.0.1"
