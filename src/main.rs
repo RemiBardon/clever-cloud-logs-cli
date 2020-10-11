@@ -17,7 +17,15 @@ use rand::distributions::Alphanumeric;
 #[derive(oauth::Authorize)]
 struct EmptyRequest {}
 
-fn main() {
+// Server Sent Event
+extern crate async_std;
+// use async_sse::{decode, encode, Event};
+// use async_std::prelude::*;
+// use async_std::io::BufReader;
+// use async_std::task;
+
+#[async_std::main]
+async fn main() -> http_types::Result<()> {
     let matches = App::new("Clever Cloud App Logs CLI")
         .version("1.0")
         .author("Rémi B. <remi.bardon.dev@gmail.com>")
@@ -75,10 +83,13 @@ fn main() {
     } = builder.get(endpoint.as_str(), EmptyRequest{});
 
     // Add OAuth 1 authorization string query parameter
+    // FIXME: Find what `authorization` query param should be (not HTTP Authorization header)
     endpoint = format!("{}?authorization={}", endpoint, authorization);
     println!("endpoint: {}", endpoint);
 
     // More program logic goes here...
+
+    Ok(())
 }
 
 fn parsed_config() -> serde_json::Value {

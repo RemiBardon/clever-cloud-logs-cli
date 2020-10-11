@@ -20,3 +20,10 @@ oauth = { version = "0.3", package = "oauth1-request" }
 
 # Server Sent Event
 async-sse = "4.0.1"
+
+[dependencies.async-std]
+version = "1.6.5"
+features = ["attributes"]
+
+[dependencies.http-types]
+version = "2.5.0"
