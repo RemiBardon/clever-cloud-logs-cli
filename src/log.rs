@@ -4,6 +4,57 @@ use serde::{Deserialize};
 // Terminal Formatting
 extern crate term;
 
+/* === Public Functions === */
+
+pub fn log(line: &str) {
+    let deserialized: CCEventMessage = {
+        match serde_json::from_str(line) {
+            Ok(d) => d,
+            Err(_) => return,
+        }
+    };
+
+    let source = &deserialized.source;
+
+    // Print timestamp
+    print!("{}: ", source.timestamp);
+
+    // Set terminal format according to emphasis
+    let mut terminal = term::stdout().unwrap();
+    if let Some((fg, attr)) = get_term_emphasis(source) {
+        terminal.fg(fg).unwrap();
+        terminal.attr(attr).unwrap();
+    }
+
+    // Print message
+    println!("{}", source.message);
+
+    // Reset terminal format
+    terminal.reset().unwrap();
+}
+
+/* === Private Functions === */
+
+fn is_clever_message(source: &CCEventSource) -> bool {
+    return source.syslog_program == "/home/bas/rubydeployer/deployer.rb";
+}
+
+fn get_term_emphasis(source: &CCEventSource) -> Option<(term::color::Color, term::Attr)> {
+    if is_clever_message(source) {
+        let lower_message = source.message.to_lowercase();
+        if lower_message.starts_with("successfully deployed in") {
+            return Some((term::color::GREEN, term::Attr::Bold))
+        } else if lower_message.starts_with("deploy failed in") {
+            return Some((term::color::RED, term::Attr::Bold))
+        } else if lower_message.starts_with("build succeeded in") {
+            return Some((term::color::BLUE, term::Attr::Bold))
+        }
+    }
+    return None
+}
+
+/* === Data Models === */
+
 #[derive(Deserialize)]
 struct CCEventMessage {
     #[serde(rename = "_source")]
@@ -18,54 +69,4 @@ struct CCEventSource {
     timestamp: String,
     #[serde(rename = "@message")]
     message: String,
-}
-
-fn is_clever_message(source: &CCEventSource) -> bool {
-    return source.syslog_program == "/home/bas/rubydeployer/deployer.rb";
-}
-
-fn is_deployment_success_message(source: &CCEventSource) -> bool {
-    return is_clever_message(source)
-        && source.message.to_lowercase().starts_with("successfully deployed in");
-}
-
-fn is_deployment_failed_message(source: &CCEventSource) -> bool {
-    return is_clever_message(source)
-        && source.message.to_lowercase().starts_with("deploy failed in");
-}
-
-fn is_build_sucess_message(source: &CCEventSource) -> bool {
-    return source.message.to_lowercase().starts_with("build succeeded in");
-}
-
-pub fn log(line: &str) {
-    let deserialized: CCEventMessage = {
-        match serde_json::from_str(line) {
-            Ok(d) => d,
-            Err(_) => return,
-        }
-    };
-
-    let source = &deserialized.source;
-
-    print!("{}: ", source.timestamp);
-
-    let message = &source.message;
-    let mut terminal = term::stdout().unwrap();
-    if is_deployment_success_message(source) {
-        terminal.fg(term::color::GREEN).unwrap();
-        terminal.attr(term::Attr::Bold).unwrap();
-        println!("{}", message);
-    } else if is_deployment_failed_message(source) {
-        terminal.fg(term::color::RED).unwrap();
-        terminal.attr(term::Attr::Bold).unwrap();
-        println!("{}", message);
-    } else if is_build_sucess_message(source) {
-        terminal.fg(term::color::BLUE).unwrap();
-        terminal.attr(term::Attr::Bold).unwrap();
-        println!("{}", message);
-    } else {
-        println!("{}", message);
-    }
-    terminal.reset().unwrap();
 }
