@@ -84,6 +84,9 @@ async fn main() -> anyhow::Result<()> {
     // Create Decoder from AsyncBufRead
     let mut reader = decode(res);
 
+    // Print status information
+    println!("Streaming logs from {}...\n", app_id);
+
     loop {
         // Get evet or log errors if any (we don't want to bubble up errors her, but rather skip loop cycle)
         let event = {
