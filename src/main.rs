@@ -139,8 +139,8 @@ fn clever_config() -> (String, String) {
     // Get OAuth1 Access Token
     let access_token: String;
     let token_key = "token";
-    if let Value::String(token) = config[token_key].clone() {
-        access_token = token;
+    if let Value::String(token) = &config[token_key] {
+        access_token = token.clone();
     } else {
         eprintln!("No value '{}' found in '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.", token_key);
         std::process::exit(1);
@@ -149,8 +149,8 @@ fn clever_config() -> (String, String) {
     // Get OAuth1 API Secret
     let token_secret: String;
     let secret_key = "secret";
-    if let Value::String(secret) = config[secret_key].clone() {
-        token_secret = secret;
+    if let Value::String(secret) = &config[secret_key] {
+        token_secret = secret.clone();
     } else {
         eprintln!("No value '{}' found in '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.", secret_key);
         std::process::exit(1);
