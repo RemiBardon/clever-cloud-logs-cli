@@ -8,15 +8,6 @@ use std::io::prelude::*;
 use std::fs::File;
 use serde_json::Value;
 
-// OAuth 1
-extern crate rand;
-use std::time::{SystemTime, UNIX_EPOCH};
-use rand::Rng; 
-use rand::distributions::Alphanumeric;
-
-#[derive(oauth::Authorize)]
-struct EmptyRequest {}
-
 // Server Sent Event
 extern crate async_std;
 // use async_sse::{decode, encode, Event};
@@ -54,6 +45,7 @@ async fn main() -> http_types::Result<()> {
         )
         .get_matches();
 
+    // First, read Clever CLoud CLI config file, which aborts if error
     let (access_token, token_secret) = clever_config();
 
     // Calling .expect() is safe here because "APP_ID" is required
@@ -67,25 +59,20 @@ async fn main() -> http_types::Result<()> {
     // Calling .expect() is safe here because "consumer_secret" is required
     let consumer_secret = matches.value_of("consumer_secret").expect("Argument 'consumer_secret' not found");
 
-    let client = oauth::Credentials::new(consumer_key, consumer_secret);
-    let token = oauth::Credentials::new(access_token.as_str(), token_secret.as_str());
+    // Create OAuth 1 consumer and token with secrets
+    let consumer = oauth1::Token::new(consumer_key, consumer_secret);
+    let token = oauth1::Token::new(access_token.as_str(), token_secret.as_str());
 
-    let mut builder = oauth::Builder::new(client, oauth::HmacSha1);
-    let nonce = rand_string(16);
-    builder
-        .token(token)
-        .nonce(nonce.as_str())
-        .timestamp(timestamp());
+    // Create OAuth 1 HTTP Authorization header
+    let authorization = oauth1::authorize("GET", endpoint.as_str(), &consumer, Some(&token), None);
+    println!("authorization: {}\n", authorization);
 
-    let oauth::Request {
-        authorization,
-        data: _,
-    } = builder.get(endpoint.as_str(), EmptyRequest{});
+    // Base64 encode OAuth 1 HTTP Authorization header
+    let base64_authorization = base64::encode(authorization);
 
     // Add OAuth 1 authorization string query parameter
-    // FIXME: Find what `authorization` query param should be (not HTTP Authorization header)
-    endpoint = format!("{}?authorization={}", endpoint, authorization);
-    println!("endpoint: {}", endpoint);
+    endpoint = format!("{}?authorization={}", endpoint, base64_authorization);
+    println!("endpoint: {}\n", endpoint);
 
     // More program logic goes here...
 
@@ -132,18 +119,4 @@ fn clever_config() -> (String, String) {
     }
 
     (access_token, token_secret)
-}
-
-fn timestamp() -> u64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(n) => n.as_secs(),
-        Err(_) => panic!("SystemTime before UNIX EPOCH!"),
-    }
-}
-
-fn rand_string(count: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(&Alphanumeric)
-        .take(count)
-        .collect::<String>()
 }

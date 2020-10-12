@@ -15,8 +15,10 @@ directories = "3.0.1"
 serde_json = "1.0.58"
 
 # OAuth 1
-rand = "0.7.3"
-oauth = { version = "0.3", package = "oauth1-request" }
+oauth1 = "1.0.0"
+
+[dependencies.base64]
+version = "0.13.0"
 
 # Server Sent Event
 async-sse = "4.0.1"
