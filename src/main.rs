@@ -64,18 +64,16 @@ async fn main() -> http_types::Result<()> {
 
     // Create OAuth 1 consumer and token with secrets
     let consumer = oauth1::Token::new(consumer_key, consumer_secret);
-    let token = oauth1::Token::new(access_token.as_str(), token_secret.as_str());
+    let token = oauth1::Token::new(access_token, token_secret);
 
     // Create OAuth 1 HTTP Authorization header
-    let authorization = oauth1::authorize("GET", endpoint.as_str(), &consumer, Some(&token), None);
-    // println!("authorization: {}\n", authorization);
+    let authorization = oauth1::authorize("GET", &endpoint, &consumer, Some(&token), None);
 
     // Base64 encode OAuth 1 HTTP Authorization header
     let base64_authorization = base64::encode(authorization);
 
     // Add OAuth 1 authorization string query parameter
     endpoint = format!("{}?authorization={}", endpoint, base64_authorization);
-    // println!("endpoint: {}\n", endpoint);
 
     let res = surf::get(endpoint).await?;
     let mut reader = decode(res);
@@ -108,7 +106,7 @@ fn parsed_config() -> serde_json::Value {
         .expect("Unable to read the file at '~/.config/clever-cloud'");
 
     // Parse the string of data into serde_json::Value
-    serde_json::from_str(json_config.as_str())
+    serde_json::from_str(&json_config)
         .expect("Invalid content in file '~/.config/clever-cloud'")
 }
 

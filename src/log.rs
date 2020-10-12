@@ -26,22 +26,16 @@ fn is_clever_message(source: &CCEventSource) -> bool {
 
 fn is_deployment_success_message(source: &CCEventSource) -> bool {
     return is_clever_message(source)
-        && source.message
-            .to_lowercase().as_str()
-            .starts_with("successfully deployed in");
+        && source.message.to_lowercase().starts_with("successfully deployed in");
 }
 
 fn is_deployment_failed_message(source: &CCEventSource) -> bool {
     return is_clever_message(source)
-        && source.message
-            .to_lowercase().as_str()
-            .starts_with("deploy failed in");
+        && source.message.to_lowercase().starts_with("deploy failed in");
 }
 
 fn is_build_sucess_message(source: &CCEventSource) -> bool {
-    return source.message
-        .to_lowercase().as_str()
-        .starts_with("build succeeded in");
+    return source.message.to_lowercase().starts_with("build succeeded in");
 }
 
 pub fn log(line: &str) {
@@ -54,9 +48,9 @@ pub fn log(line: &str) {
 
     let source = &deserialized.source;
 
-    print!("{}: ", source.timestamp.as_str());
+    print!("{}: ", source.timestamp);
 
-    let message = source.message.as_str();
+    let message = &source.message;
     let mut terminal = term::stdout().unwrap();
     if is_deployment_success_message(source) {
         terminal.fg(term::color::GREEN).unwrap();
