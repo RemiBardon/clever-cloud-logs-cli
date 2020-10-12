@@ -86,10 +86,10 @@ async fn main() -> http_types::Result<()> {
             Event::Message(message) => {
                 match std::str::from_utf8(message.data()) {
                     Ok(s) => log::log(s),
-                    Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+                    Err(e) => eprintln!("Invalid UTF-8 sequence: {}", e),
                 }
             },
-            Event::Retry(duration) => println!("retry: {}s", duration.as_secs())
+            Event::Retry(duration) => eprintln!("retry: {}s", duration.as_secs())
         }
     }
 }
@@ -119,7 +119,7 @@ fn clever_config() -> (String, String) {
     if let Value::String(token) = config[token_key].clone() {
         access_token = token;
     } else {
-        println!("No value '{}' found in '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.", token_key);
+        eprintln!("No value '{}' found in '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.", token_key);
         std::process::exit(1);
     }
     
@@ -129,7 +129,7 @@ fn clever_config() -> (String, String) {
     if let Value::String(secret) = config[secret_key].clone() {
         token_secret = secret;
     } else {
-        println!("No value '{}' found in '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.", secret_key);
+        eprintln!("No value '{}' found in '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.", secret_key);
         std::process::exit(1);
     }
 
