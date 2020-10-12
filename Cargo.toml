@@ -23,3 +23,6 @@ surf = "2.0.0"
 async-sse = "4.0.1"
 async-std = { version = "1.6.5", features = ["attributes"] }
 http-types = { version = "2.5.0" }
+
+# Event Messages Deserialization
+serde = { version = "1.0.116", features = ["derive"] }

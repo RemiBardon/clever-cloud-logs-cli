@@ -375,6 +375,7 @@ dependencies = [
  "directories",
  "http-types",
  "oauth1",
+ "serde",
  "serde_json",
  "surf",
 ]

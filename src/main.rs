@@ -15,6 +15,9 @@ extern crate surf;
 use async_sse::{decode, Event};
 use async_std::prelude::*;
 
+// Pretty logs
+mod log;
+
 #[async_std::main]
 async fn main() -> http_types::Result<()> {
     let matches = App::new("Clever Cloud App Logs CLI")
@@ -83,14 +86,10 @@ async fn main() -> http_types::Result<()> {
         // Match and handle the event
         match event {
             Event::Message(message) => {
-                let data = match std::str::from_utf8(message.data()) {
-                    Ok(s) => s,
+                match std::str::from_utf8(message.data()) {
+                    Ok(s) => log::log(s),
                     Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-                };
-                
-                println!("{} event: {}", message.name(), data);
-
-                // More program logic goes here...
+                }
             },
             Event::Retry(duration) => println!("retry: {}s", duration.as_secs())
         }
