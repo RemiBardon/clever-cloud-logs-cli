@@ -52,7 +52,7 @@ async fn main() -> http_types::Result<()> {
     let app_id = matches.value_of("APP_ID").expect("Argument 'APP_ID' not found");
 
     // Create HTTP endpoint
-    let mut endpoint = format!("https://api.clever-cloud.com:443/v2/logs/{}/sse", app_id);
+    let mut endpoint = format!("https://api.clever-cloud.com/v2/logs/{}/sse", app_id);
 
     // Calling .expect() is safe here because "consumer_key" is required
     let consumer_key = matches.value_of("consumer_key").expect("Argument 'consumer_key' not found");
