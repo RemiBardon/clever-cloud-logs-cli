@@ -5,6 +5,9 @@ authors = ["Rémi Bardon <remi.bardon.dev@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+# Error Handling
+anyhow = { version = "1.0.33", default-features = false }
+
 # Command Line Argument Parsing
 clap = "2.33.3"
 

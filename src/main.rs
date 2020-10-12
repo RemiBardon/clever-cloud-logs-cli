@@ -1,3 +1,6 @@
+// Error Handling
+use anyhow::Error;
+
 // Command Line Argument Parsing
 extern crate clap;
 use clap::{Arg, App};
@@ -19,7 +22,7 @@ use async_std::prelude::*;
 mod log;
 
 #[async_std::main]
-async fn main() -> http_types::Result<()> {
+async fn main() -> anyhow::Result<()> {
     let matches = App::new("Clever Cloud App Logs CLI")
         .version("1.0")
         .author("Rémi B. <remi.bardon.dev@gmail.com>")
@@ -75,21 +78,41 @@ async fn main() -> http_types::Result<()> {
     // Add OAuth 1 authorization string query parameter
     endpoint = format!("{}?authorization={}", endpoint, base64_authorization);
 
-    let res = surf::get(endpoint).await?;
+    // Connect to endpoint
+    let res = surf::get(endpoint).await.map_err(|e| Error::msg(e.to_string()))?;
+
+    // Create Decoder from AsyncBufRead
     let mut reader = decode(res);
 
     loop {
-        let event = reader.next().await.unwrap()?;
+        // Get evet or log errors if any (we don't want to bubble up errors her, but rather skip loop cycle)
+        let event = {
+            match reader.next().await {
+                Some(value) => {
+                    match value {
+                        Ok(e) => e,
+                        Err(err) => {
+                            eprintln!("Error getting data: {}", err);
+                            continue
+                        },
+                    }
+                },
+                None => {
+                    eprintln!("Could not read next value from buffer");
+                    continue
+                },
+            }
+        };
         
         // Match and handle the event
         match event {
             Event::Message(message) => {
                 match std::str::from_utf8(message.data()) {
-                    Ok(s) => log::log(s),
-                    Err(e) => eprintln!("Invalid UTF-8 sequence: {}", e),
+                    Ok(line) => log::log(line),
+                    Err(err) => eprintln!("Invalid UTF-8 sequence: {}", err),
                 }
             },
-            Event::Retry(duration) => eprintln!("retry: {}s", duration.as_secs())
+            Event::Retry(duration) => eprintln!("Retry: {}s", duration.as_secs())
         }
     }
 }
