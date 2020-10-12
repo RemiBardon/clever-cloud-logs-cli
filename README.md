@@ -24,7 +24,6 @@ clever-cloud-logs <APP_ID> --consumer_key <OAUTH_CONSUMER_KEY> --consumer_secret
 
 ```sh
 git pull https://github.com/RemiBardon/clever-cloud-logs
-cargo build
 cargo run -- <APP_ID> --consumer_key <OAUTH_CONSUMER_KEY> --consumer_secret <OAUTH_CONSUMER_SECRET>
 ```
 
