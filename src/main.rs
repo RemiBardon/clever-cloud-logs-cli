@@ -8,12 +8,12 @@ use std::io::prelude::*;
 use std::fs::File;
 use serde_json::Value;
 
+// HTTP Client
+extern crate surf;
+
 // Server Sent Event
-extern crate async_std;
-// use async_sse::{decode, encode, Event};
-// use async_std::prelude::*;
-// use async_std::io::BufReader;
-// use async_std::task;
+use async_sse::{decode, Event};
+use async_std::prelude::*;
 
 #[async_std::main]
 async fn main() -> http_types::Result<()> {
@@ -65,18 +65,36 @@ async fn main() -> http_types::Result<()> {
 
     // Create OAuth 1 HTTP Authorization header
     let authorization = oauth1::authorize("GET", endpoint.as_str(), &consumer, Some(&token), None);
-    println!("authorization: {}\n", authorization);
+    // println!("authorization: {}\n", authorization);
 
     // Base64 encode OAuth 1 HTTP Authorization header
     let base64_authorization = base64::encode(authorization);
 
     // Add OAuth 1 authorization string query parameter
     endpoint = format!("{}?authorization={}", endpoint, base64_authorization);
-    println!("endpoint: {}\n", endpoint);
+    // println!("endpoint: {}\n", endpoint);
 
-    // More program logic goes here...
+    let res = surf::get(endpoint).await?;
+    let mut reader = decode(res);
 
-    Ok(())
+    loop {
+        let event = reader.next().await.unwrap()?;
+        
+        // Match and handle the event
+        match event {
+            Event::Message(message) => {
+                let data = match std::str::from_utf8(message.data()) {
+                    Ok(s) => s,
+                    Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+                };
+                
+                println!("{} event: {}", message.name(), data);
+
+                // More program logic goes here...
+            },
+            Event::Retry(duration) => println!("retry: {}s", duration.as_secs())
+        }
+    }
 }
 
 fn parsed_config() -> serde_json::Value {
