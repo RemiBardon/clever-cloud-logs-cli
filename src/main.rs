@@ -99,8 +99,8 @@ async fn main() -> Result<()> {
 async fn log_next(decoder: &mut async_sse::Decoder<surf::Response>) -> Result<()> {
     // Wait for new data
     let event = decoder.next().await
-            .ok_or(Error::msg("Could not read next value from buffer"))?        // Unwrap Option
-            .map_err(|e| Error::msg(format!("Error getting data: {}", e)))?;    // Unwrap Result
+        .ok_or(Error::msg("Could not read next value from buffer"))?        // Unwrap Option
+        .map_err(|e| Error::msg(format!("Error getting data: {}", e)))?;    // Unwrap Result
 
     // Match and handle the event
     match event {
