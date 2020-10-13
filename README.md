@@ -2,10 +2,6 @@
 
 `clever-cloud-logs` is a [CLI](https://en.wikipedia.org/wiki/Command-line_interface) created to stream [Clever Cloud](https://www.clever-cloud.com/) app logs in a terminal.
 
-## Introduction
-
-> // TODO: Add Introduction
-
 ## Usage
 
 ```sh
