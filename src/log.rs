@@ -2,7 +2,7 @@
 use anyhow::{Result, Error};
 
 // JSON Parsing
-use serde::{Deserialize};
+use serde::Deserialize;
 
 // Terminal Formatting
 extern crate term;
