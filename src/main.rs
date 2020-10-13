@@ -48,16 +48,9 @@ async fn main() -> Result<()> {
         )
         .get_matches();
 
-    // First, read Clever CLoud CLI config file, which aborts if error
-    let (access_token, token_secret) = config::clever_config()?;
-
     // Note: Should never throw "APP_ID" is required
     let app_id = matches.value_of("APP_ID")
         .ok_or(Error::msg("Argument 'APP_ID' not found"))?;
-
-    // Create HTTP endpoint
-    let mut endpoint = format!("https://api.clever-cloud.com/v2/logs/{}/sse", app_id);
-
     // Note: Should never throw because "consumer_key" is required
     let consumer_key = matches.value_of("consumer_key")
         .ok_or(Error::msg("Argument 'consumer_key' not found"))?;
@@ -65,18 +58,8 @@ async fn main() -> Result<()> {
     let consumer_secret = matches.value_of("consumer_secret")
         .ok_or(Error::msg("Argument 'consumer_secret' not found"))?;
 
-    // Create OAuth 1 consumer and token with secrets
-    let consumer = oauth1::Token::new(consumer_key, consumer_secret);
-    let token = oauth1::Token::new(access_token, token_secret);
-
-    // Create OAuth 1 HTTP Authorization header
-    let authorization = oauth1::authorize("GET", &endpoint, &consumer, Some(&token), None);
-
-    // Base64 encode OAuth 1 HTTP Authorization header
-    let base64_authorization = base64::encode(authorization);
-
-    // Add OAuth 1 authorization string query parameter
-    endpoint = format!("{}?authorization={}", endpoint, base64_authorization);
+    // Build SSE endpoint
+    let endpoint = sse_endpoint(app_id, consumer_key, consumer_secret)?;
 
     // Connect to endpoint
     let res = surf::get(&endpoint).await
@@ -94,6 +77,29 @@ async fn main() -> Result<()> {
             eprintln!("{}", e);
         }
     }
+}
+
+fn sse_endpoint(app_id: &str, consumer_key: &str, consumer_secret: &str) -> Result<String> {
+    // First, read Clever CLoud CLI config file, which aborts if error
+    let (access_token, token_secret) = config::clever_config()?;
+
+    // Create HTTP endpoint
+    let mut endpoint = format!("https://api.clever-cloud.com/v2/logs/{}/sse", app_id);
+
+    // Create OAuth 1 consumer and token with secrets
+    let consumer = oauth1::Token::new(consumer_key, consumer_secret);
+    let token = oauth1::Token::new(access_token, token_secret);
+
+    // Create OAuth 1 HTTP Authorization header
+    let authorization = oauth1::authorize("GET", &endpoint, &consumer, Some(&token), None);
+
+    // Base64 encode OAuth 1 HTTP Authorization header
+    let base64_authorization = base64::encode(authorization);
+
+    // Add OAuth 1 authorization string query parameter
+    endpoint = format!("{}?authorization={}", endpoint, base64_authorization);
+
+    Ok(endpoint)
 }
 
 async fn log_next(decoder: &mut async_sse::Decoder<surf::Response>) -> Result<()> {
