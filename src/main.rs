@@ -1,5 +1,5 @@
 // Error Handling
-use anyhow::Error;
+use anyhow::{Result, Error};
 
 // Command Line Argument Parsing
 extern crate clap;
@@ -22,7 +22,7 @@ use async_std::prelude::*;
 mod log;
 
 #[async_std::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<()> {
     let matches = App::new("Clever Cloud App Logs CLI")
         .version("1.0")
         .author("Rémi B. <remi.bardon.dev@gmail.com>")
@@ -52,18 +52,21 @@ async fn main() -> anyhow::Result<()> {
         .get_matches();
 
     // First, read Clever CLoud CLI config file, which aborts if error
-    let (access_token, token_secret) = clever_config();
+    let (access_token, token_secret) = clever_config()?;
 
-    // Calling .expect() is safe here because "APP_ID" is required
-    let app_id = matches.value_of("APP_ID").expect("Argument 'APP_ID' not found");
+    // Note: Should never throw "APP_ID" is required
+    let app_id = matches.value_of("APP_ID")
+        .ok_or(Error::msg("Argument 'APP_ID' not found"))?;
 
     // Create HTTP endpoint
     let mut endpoint = format!("https://api.clever-cloud.com/v2/logs/{}/sse", app_id);
 
-    // Calling .expect() is safe here because "consumer_key" is required
-    let consumer_key = matches.value_of("consumer_key").expect("Argument 'consumer_key' not found");
-    // Calling .expect() is safe here because "consumer_secret" is required
-    let consumer_secret = matches.value_of("consumer_secret").expect("Argument 'consumer_secret' not found");
+    // Note: Should never throw because "consumer_key" is required
+    let consumer_key = matches.value_of("consumer_key")
+        .ok_or(Error::msg("Argument 'consumer_key' not found"))?;
+    // Note: Should never throw because "consumer_secret" is required
+    let consumer_secret = matches.value_of("consumer_secret")
+        .ok_or(Error::msg("Argument 'consumer_secret' not found"))?;
 
     // Create OAuth 1 consumer and token with secrets
     let consumer = oauth1::Token::new(consumer_key, consumer_secret);
@@ -79,65 +82,65 @@ async fn main() -> anyhow::Result<()> {
     endpoint = format!("{}?authorization={}", endpoint, base64_authorization);
 
     // Connect to endpoint
-    let res = surf::get(endpoint).await.map_err(|e| Error::msg(e.to_string()))?;
+    let res = surf::get(&endpoint).await
+        .map_err(|e| Error::msg(format!("Could not send GET request to {}: {}", &endpoint, e)))?;
 
     // Create Decoder from AsyncBufRead
-    let mut reader = decode(res);
+    let mut decoder = decode(res);
 
     // Print status information
     println!("Streaming logs from {}...\n", app_id);
 
     loop {
-        // Get evet or log errors if any (we don't want to bubble up errors her, but rather skip loop cycle)
-        let event = {
-            match reader.next().await {
-                Some(value) => {
-                    match value {
-                        Ok(e) => e,
-                        Err(err) => {
-                            eprintln!("Error getting data: {}", err);
-                            continue
-                        },
-                    }
-                },
-                None => {
-                    eprintln!("Could not read next value from buffer");
-                    continue
-                },
-            }
-        };
-        
-        // Match and handle the event
-        match event {
-            Event::Message(message) => {
-                match std::str::from_utf8(message.data()) {
-                    Ok(line) => log::log(line),
-                    Err(err) => eprintln!("Invalid UTF-8 sequence: {}", err),
-                }
-            },
-            Event::Retry(duration) => eprintln!("Retry: {}s", duration.as_secs())
+        // Handle event or log errors if any (we don't want to bubble up errors here, but rather skip loop cycle)
+        if let Err(e) = log_next(&mut decoder).await {
+            eprintln!("{}", e);
         }
     }
 }
 
-fn parsed_config() -> serde_json::Value {
-    let user_dirs = UserDirs::new().expect("Could not find user home directory");
-    let config_file_path = format!("{}/.config/clever-cloud", user_dirs.home_dir().display());
+async fn log_next(decoder: &mut async_sse::Decoder<surf::Response>) -> Result<()> {
+    // Wait for new data
+    let event = decoder.next().await
+            .ok_or(Error::msg("Could not read next value from buffer"))?        // Unwrap Option
+            .map_err(|e| Error::msg(format!("Error getting data: {}", e)))?;    // Unwrap Result
 
-    let mut config_file = File::open(config_file_path)
-        .expect("No file found at '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.");
-    
-    let mut json_config = String::new();
-    config_file.read_to_string(&mut json_config)
-        .expect("Unable to read the file at '~/.config/clever-cloud'");
-
-    // Parse the string of data into serde_json::Value
-    serde_json::from_str(&json_config)
-        .expect("Invalid content in file '~/.config/clever-cloud'")
+    // Match and handle the event
+    match event {
+        Event::Message(message) => {
+            match std::str::from_utf8(message.data()) {
+                Ok(line) => log::log(line),
+                Err(e) => Err(Error::msg(format!("Invalid UTF-8 sequence: {}", e))),
+            }
+        },
+        Event::Retry(duration) => Err(Error::msg(format!("Retry: {}s", duration.as_secs()))),
+    }
 }
 
-fn clever_config() -> (String, String) {
-    let config = parsed_config();
+fn parsed_config() -> Result<serde_json::Value> {
+    // Find user's home directory
+    let user_dirs = UserDirs::new().ok_or(Error::msg("Could not find user home directory"))?;
+    let config_file_path = format!("{}/.config/clever-cloud", user_dirs.home_dir().display());
+
+    // Open config file
+    let mut config_file = File::open(config_file_path)
+        .map_err(|_| Error::msg("No file found at '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`."))?;
+    
+    // Read file into a JSON string
+    let mut json_config = String::new();
+    config_file.read_to_string(&mut json_config)
+        .map_err(|e| Error::msg(format!("Unable to read the file at '~/.config/clever-cloud': {}", e)))?;
+
+    // Parse the JSON string into serde_json::Value
+    let config = serde_json::from_str(&json_config)
+        .map_err(|e| Error::msg(format!("Invalid content in file '~/.config/clever-cloud': {}",e)))?;
+
+    // Return value
+    Ok(config)
+}
+
+fn clever_config() -> Result<(String, String)> {
+    let config = parsed_config()?;
 
     // Get OAuth1 Access Token
     let access_token: String;
@@ -145,8 +148,7 @@ fn clever_config() -> (String, String) {
     if let Value::String(token) = &config[token_key] {
         access_token = token.clone();
     } else {
-        eprintln!("No value '{}' found in '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.", token_key);
-        std::process::exit(1);
+        return Err(Error::msg(format!("No value '{}' found in '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.", token_key)))
     }
     
     // Get OAuth1 API Secret
@@ -155,9 +157,8 @@ fn clever_config() -> (String, String) {
     if let Value::String(secret) = &config[secret_key] {
         token_secret = secret.clone();
     } else {
-        eprintln!("No value '{}' found in '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.", secret_key);
-        std::process::exit(1);
+        return Err(Error::msg(format!("No value '{}' found in '~/.config/clever-cloud'. Please follow instructions at https://github.com/CleverCloud/clever-tools to install 'clever-tools', then run `clever login`.", secret_key)))
     }
 
-    (access_token, token_secret)
+    Ok((access_token, token_secret))
 }
